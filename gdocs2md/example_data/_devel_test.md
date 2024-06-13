@@ -1,0 +1,5 @@
+[Youssef et al. (2023)](https://www.google.com/url?q=https://arxiv.org/pdf/2305.03219.pdf&sa=D&source=editors&ust=1717021441132327&usg=AOvVaw15Bi39YJlp6TaAZ4RrmWvx): “All models are local: time to replace external validation with recurring local validation” **LINK FIX**
+
+>  Google [Sculley et al. 2015](https://papers.neurips.cc/paper/5656-hidden-technical-debt-in-machine-learning-systems.pdf). Continuous performance monitoring and model updating are critical for ML implementation through MLOps. [[Granlund et al. 2021](https://link.springer.com/article/10.1007/s42979-021-00726-1)].”  
+
+[Neural Lad: A Neural Latent Dynamics Framework for Times Series Modeling](https://www.google.com/url?q=https://neurips.cc/virtual/2023/poster/71156&sa=D&source=editors&ust=1717081900965129&usg=AOvVaw2EtQJPuECWouut8C9YUPI8)  [ [OpenReview](https://www.google.com/url?q=https://openreview.net/forum?id%3DbISkJSa5Td&sa=D&source=editors&ust=1717081900965285&usg=AOvVaw2QywhwU5ICLQfVzTUNwMsu)]
