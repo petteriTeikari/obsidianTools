@@ -137,16 +137,9 @@ def get_out_ref(ref, image_path_out):
 def convert_image(image_path, image_path_out):
 
     image_path = image_path.replace('%20', ' ')
-    if os.path.exists(image_path_out):
-        # TODO! You should fix the non-uniqe filename issue here
-        #  you could have e.g. image13.png and image13.jpg, and you try to convert the image13.png
-        #  to image13.jpg, just to realize that it is larger than the PNG and you remove the file from your kb
-        # problem especially with Google Docs exports
-        # TODO! This will cause a problem if you have referenced the same image multiple times in the same .md file
-        #  as now the conversion is not going forward as the output is there already, and the Obsidian Markdown
-        #  reference does not get updated
-        logging.warning(f"Image {image_path_out} exists. Will not convert this!")
-        return None, image_path
+
+    # NOTE! This now requires that your attachment names are unique, which you can achieve e.g. with:
+    # https://github.com/dy-sh/obsidian-unique-attachments
 
     if os.path.exists(image_path):
         size_in_kB = os.stat(image_path).st_size / (1024)
