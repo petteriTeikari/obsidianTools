@@ -4,6 +4,8 @@ import logging
 import os
 import re
 
+from utils import get_image_refs_of_line
+
 
 def parse_args_to_dict():
 
@@ -39,61 +41,32 @@ def get_all_files(input_folder, ext = '*.md'):
 
 
 def get_disk_use(files):
-    sizes = [os.path.getsize(f) for f in files]
+    sizes = []
+    not_found = []
+    for f in files:
+        f = f.replace('%20', ' ')
+        try:
+            sizes.append(os.path.getsize(f))
+        except Exception as e:
+            not_found.append(f)
+
     total_size = sum(sizes)
-    return total_size
+
+    return total_size, not_found
 
 
 def get_kb_files(args):
-    md_files = get_all_files(args["input_folder"])
-    md_size = get_disk_use(md_files)
+    md_files = sorted(get_all_files(args["input_folder"]))
+    md_size, not_found = get_disk_use(md_files)
     logging.info(f"Total size of .md files: {md_size/10**6:.2f} MB")
     logging.info(f"Average md file size: {md_size/len(md_files)/10**3:.2f} kB")
 
-    img_files = get_all_files(args["input_folder"], ext=['*.png', '*.jpg', '*.jpeg', '*.gif', '*.svg'])
-    img_size = get_disk_use(img_files)
+    img_files = sorted(get_all_files(args["input_folder"], ext=['*.png', '*.jpg', '*.jpeg', '*.gif', '*.svg']))
+    img_size, not_found2 = get_disk_use(img_files)
     logging.info(f"Total size of image files: {img_size/10**9:.2f} GB")
     logging.info(f"Average image file size: {img_size/len(img_files)/10**3:.2f} kB")
 
     return md_files, img_files
-
-
-def return_image_paths(matches):
-
-    image_paths = []
-    for ms in matches:
-        if ms is not None:
-            if '![[' in ms:
-                image_path = ms.split('[[')[1].split(']]')[0]
-                image_paths.append(image_path)
-            else:
-                image_path = ms.split('](')[1].split(')')[0]
-                image_paths.append(image_path)
-
-    if len(image_paths) > 0:
-        return image_paths
-    else:
-        return None
-
-
-def get_image_refs_of_line(line):
-
-    line = line.replace('> ', '').replace('>', '')
-
-    #pattern1 = '!\[.*\]\(.*.\)'
-    pattern2 = r'!\[\[\D*\d*\.\D{3,4}]]' # https://stackoverflow.com/q/68813348
-    pattern3 = '!\[[^\]]*\]\((.*?)\s*("(?:.*[^"])")?\s*\)' # https://stackoverflow.com/a/44227600
-
-    #match1 = [x.group() for x in re.finditer(pattern1, line)]
-    match2 = [x.group() for x in re.finditer(pattern2, line)]
-    match3 = [x.group() for x in re.finditer(pattern3, line)]
-    matches = match2 + match3
-    image_paths = return_image_paths(matches)
-
-    if image_paths is not None:
-        return image_paths
-    else:
-        return None
 
 
 def get_image_refs_of_file(f, relative_base_path):
@@ -223,7 +196,7 @@ def doublecheck_that_not_referenced_in_md_files(md_files, moved_files, input_fil
     # TODO! you could check for unique naming here, as e.g. Google Docs import like just sequential naming, so you
     #  get the same names in multiple folders, and then you would overwrite the files (not_referenced folder)
 
-    return input_out, moved_out
+    return input_out, moved_out, actually_referenced
 
 
 def move_the_unreferenced_files(input_files, moved_files, input_folder, move_folder,
@@ -254,6 +227,10 @@ if __name__ == "__main__":
     md_files, img_files = get_kb_files(args)
 
     img_refs = get_img_refs_from_md_files(md_files, args["input_folder"])
-    input_files, moved_files, move_folder = check_if_images_on_disk_are_referenced(img_refs, img_files, args["input_folder"])
-    input_files, moved_files = doublecheck_that_not_referenced_in_md_files(md_files, moved_files, input_files)
-    move_the_unreferenced_files(input_files, moved_files, args["input_folder"], move_folder)
+    input_files, moved_files, move_folder = (
+        check_if_images_on_disk_are_referenced(img_refs, img_files, args["input_folder"]))
+    input_files, moved_files, actually_referenced = (
+        doublecheck_that_not_referenced_in_md_files(md_files, moved_files, input_files))
+
+    move_the_unreferenced_files(input_files, moved_files, args["input_folder"], move_folder,
+                                move=False)
