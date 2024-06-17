@@ -216,7 +216,7 @@ def move_the_unreferenced_files(input_files, moved_files, input_folder, move_fol
 
     actually_moved_files = get_all_files(move_folder, ext=['*.png', '*.jpg', '*.jpeg', '*.gif', '*.svg'])
     logging.info(f"Moved {len(actually_moved_files)} files to {move_folder}.")
-    freed_up_disk_space = get_disk_use(actually_moved_files)
+    freed_up_disk_space, _ = get_disk_use(actually_moved_files)
     logging.info(f"Freed up {freed_up_disk_space / 10 ** 6:.2f} MB of disk space.")
 
 
@@ -233,4 +233,4 @@ if __name__ == "__main__":
         doublecheck_that_not_referenced_in_md_files(md_files, moved_files, input_files))
 
     move_the_unreferenced_files(input_files, moved_files, args["input_folder"], move_folder,
-                                move=False)
+                                move=True)

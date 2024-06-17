@@ -1,4 +1,5 @@
 import logging
+import os
 import re
 
 
@@ -43,6 +44,7 @@ def return_image_paths(matches):
 def get_absolute_img_path(ref, img_files):
 
     ref = ref.replace(' ', '%20')
+    ref = os.path.basename(ref) # get the basename of the image reference
     res = [i for i in img_files if ref in i]
     if len(res) > 0:
         if len(res) == 1:

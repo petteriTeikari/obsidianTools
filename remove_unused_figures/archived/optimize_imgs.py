@@ -58,6 +58,9 @@ def process_md_files_for_optimization(input_folder, export_on = True):
         with open(md_file, 'r') as f:
             lines = f.readlines()
 
+        if 'Computational Art' in md_file:
+            print('debug')
+
         lines_out, lines_changed = optimize_imgs_references(lines, img_files)
 
         if export_on:
@@ -65,6 +68,8 @@ def process_md_files_for_optimization(input_folder, export_on = True):
                 os.rename(md_file, md_file + '.bakMDupp')
                 with open(md_file, 'w') as f:
                     f.writelines(lines_out)
+
+        logging.info(f"->  {len(lines_changed)} lines changed images.")
 
     img_files_out = get_all_img_files(input_folder)
     img_size_out, not_found = get_disk_use(img_files_out)
@@ -80,8 +85,6 @@ def optimize_imgs_references(lines, img_files):
             if image_path_out is not None:
                 lines_changed.append((i, line, image_path_out))
         lines_out.append(line)
-
-    logging.info(f"{len(lines_changed)} lines changed images.")
 
     return lines_out, lines_changed
 
@@ -137,26 +140,33 @@ def get_out_ref(ref, image_path_out):
 def convert_image(image_path, image_path_out):
 
     image_path = image_path.replace('%20', ' ')
-
     # NOTE! This now requires that your attachment names are unique, which you can achieve e.g. with:
-    # https://github.com/dy-sh/obsidian-unique-attachments
+    # https://github.com/dy-sh/obsidian-unique-attachments or run the "uniquenize_img_names_and_move.py" script
 
-    if os.path.exists(image_path):
-        size_in_kB = os.stat(image_path).st_size / (1024)
-        img = Image.open(image_path)
-        img = img.convert('RGB')
-        img.save(image_path_out, format='JPEG', subsampling=0, quality=85)  # Save the image
-        size_out_kB = os.stat(image_path_out).st_size / (1024)
+    if not os.path.exists(image_path_out):
+        # TODO! Does not handle yet unique names no matter what the extension is
+        #  e.g. you could have image44.png and image44.jpg, and converting the .png to .jpg would overwrite the .jpg
 
-        if size_out_kB > size_in_kB:
-            # no point in converting to a larger file size with lossy compression
-            logging.debug(f"Image {image_path} was not converted to {image_path_out} because it would have been larger.")
-            os.remove(image_path_out)
-            return None, image_path
+        if os.path.exists(image_path):
+            size_in_kB = os.stat(image_path).st_size / (1024)
+            img = Image.open(image_path)
+            img = img.convert('RGB')
+            img.save(image_path_out, format='JPEG', subsampling=0, quality=85)  # Save the image
+            size_out_kB = os.stat(image_path_out).st_size / (1024)
 
-        else:
-            os.rename(image_path, image_path + '.bakupp')
+            # if size_out_kB > size_in_kB:
+            #     # no point in converting to a larger file size with lossy compression
+            #     logging.debug(f"Image {image_path} was not converted to {image_path_out} because it would have been larger.")
+            #     os.remove(image_path_out)
+            #     return None, image_path
+            #
+            # else:
+            os.rename(image_path, image_path + '.bakuppIMG')
             return image_path_out, None
+
+    else:
+        # logging.info(f"Image {image_path_out} already exists. Skipping conversion.")
+        return image_path_out, None
 
 
 def replace_img_name_in_line(line, ref, ref_out):
@@ -199,6 +209,9 @@ def process_line_for_img_optimization(line, img_files):
             convert_ON = decide_whether_to_convert(image_path = image_path_list[0])
             if convert_ON:
                 line, not_reduced, image_path_out = process_single_imagepath(image_path_list, line, ref, not_reduced)
+        else:
+            if 'http' not in ref:
+                logging.warning(f"Image {ref} not found in the image files.")
 
     return line, image_path_out
 
