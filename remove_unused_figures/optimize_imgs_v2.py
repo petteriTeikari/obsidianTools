@@ -182,6 +182,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     args = parse_args_to_dict()
 
+    # TODO! Put this inside the .md file loop as you would like each folder to have
+    #  an unique hash for the images
     use_hash = True
     if use_hash:
         unique_hash = create_hash()
@@ -190,5 +192,6 @@ if __name__ == "__main__":
 
     process_md_files_for_optimization(input_folder = args["input_folder"],
                                       unique_hash = unique_hash)
+
     batch_convert_images(input_folder = args["input_folder"],
                          unique_hash = unique_hash)
