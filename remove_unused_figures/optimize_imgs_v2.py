@@ -6,7 +6,7 @@ import re
 from PIL import Image
 
 from remove_unused_figures import get_disk_use, get_img_refs_from_md_files
-from utils import get_image_refs_of_line
+from utils import get_image_refs_of_line, create_hash, hash_suffix_str
 
 
 def parse_args_to_dict():
@@ -51,23 +51,18 @@ def get_all_img_files(input_folder):
 
 def check_if_conversion_needed(img_ref, input_folder):
 
-    if img_ref.startswith('../attachments/'):
-        # assume that you ran "uniquenize_img_names_and_move.py" or had some other way ensuring
-        # that you most of the attachments are here and they already have unique names (well with the extension)
-        refs = {}
-        fname = os.path.basename(img_ref)
-        fname, ext = os.path.splitext(fname)
-        if ext == '.png':
-            refs['ref_out'] = img_ref.replace('.png', '.jpg')
-            refs['ref_pathout'] = os.path.join(input_folder, refs['ref_out'].replace('../', ''))
-            refs['ref_in'] = img_ref
-            refs['ref_pathin'] = os.path.join(input_folder, img_ref.replace('../', ''))
-            if os.path.exists(refs['ref_pathout']):
-                return None
-            else:
-                return refs
-    else:
-        return None
+    refs = {}
+    fname = os.path.basename(img_ref)
+    fname, ext = os.path.splitext(fname)
+    if ext == '.png':
+        refs['ref_out'] = img_ref.replace('.png', '.jpg')
+        refs['ref_pathout'] = os.path.join(input_folder, refs['ref_out'].replace('../', ''))
+        refs['ref_in'] = img_ref
+        refs['ref_pathin'] = os.path.join(input_folder, img_ref.replace('../', ''))
+        if os.path.exists(refs['ref_pathout']):
+            return None
+        else:
+            return refs
 
 
 def optimize_imgs_references(lines, img_files, md_fname, input_folder):
@@ -99,42 +94,45 @@ def optimize_imgs_references(lines, img_files, md_fname, input_folder):
     return lines_out, lines_changed, skipped
 
 
-def rename_extension_of_refs(img_refs, lines):
+def rename_extension_of_refs(img_refs, lines, unique_hash):
+
+    hash_string = hash_suffix_str(unique_hash)
 
     lines_as_str = ''.join(lines)
     for img_ref in img_refs:
         base_name = os.path.basename(img_ref)
         fname, ext = os.path.splitext(base_name)
         if ext == '.jpeg':
-            lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}.jpg')
+            lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}{hash_string}.jpg')
         elif ext == '.png':
-            lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}.jpg')
+            lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}{hash_string}.jpg')
         elif ext == '.jpg':
-            a = 1
+            if len(hash_string) > 0:
+                lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}{hash_string}.jpg')
         elif ext == '.ico':
             a = 1
-        elif ext == '.gif':
-            lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}.jpg')
+        #elif ext == '.gif':
+        #    lines_as_str = lines_as_str.replace(f'{base_name}', f'{fname}.jpg')
         else:
             a = 1
 
     return lines_as_str
 
 
-def process_md_file(md_file, img_files, md_fname, img_refs, input_folder, export_on=True):
+def process_md_file(md_file, img_files, md_fname, img_refs, input_folder, unique_hash, export_on=True):
 
     with open(md_file, 'r') as f:
         lines = f.readlines()
 
     # batch convert all pngs to jpgs, and rename jpeg to jpg on Bash then
-    lines_out = rename_extension_of_refs(img_refs, lines)
+    lines_out = rename_extension_of_refs(img_refs, lines, unique_hash)
 
     os.rename(md_file, md_file + '.bakMDupp')
     with open(md_file, 'w') as f:
         f.writelines(lines_out)
 
 
-def process_md_files_for_optimization(input_folder):
+def process_md_files_for_optimization(input_folder, unique_hash=None):
 
     img_files = get_all_img_files(input_folder)
     md_files = sorted(glob.glob(os.path.join(input_folder, '**', '*.md'), recursive=True))
@@ -147,31 +145,50 @@ def process_md_files_for_optimization(input_folder):
         fname, ext = os.path.splitext(fname)
         im_refs_file = img_refs[fname.replace(' ', '_')]
 
-        process_md_file(md_file, img_files, md_fname, im_refs_file, input_folder)
+        process_md_file(md_file, img_files, md_fname, im_refs_file, input_folder, unique_hash)
 
 
-def batch_convert_images(input_folder):
+def batch_convert_images(input_folder, quality=85, subsampling=0, unique_hash=None):
+
+    hash_string = hash_suffix_str(unique_hash)
 
     def correct_format(ext):
-        return ext == '.png' or ext == '.jpeg' or ext == '.gif'
+        return ext == '.png' or ext == '.jpeg'
 
     img_files = get_all_img_files(input_folder)
     for i, img_file in enumerate(img_files):
         fname = os.path.basename(img_file)
         fname, ext = os.path.splitext(fname)
         if correct_format(ext):
-            logging.info(f"#{i}/{len(img_files)}: Converting {fname} to jpg")
+            logging.info(f"#{i+1}/{len(img_files)}: Converting {fname} to jpg")
             img_file = img_file.replace('%20', ' ')
             img = Image.open(img_file)
             img = img.convert('RGB')
             img_file_out = img_file.replace('.png', '.jpg').replace('.jpeg', '.jpg').replace('.gif', '.jpg')
-            img.save(img_file_out, format='JPEG', subsampling=0, quality=85)
+            img_file_out = img_file_out.replace('.jpg', f'{hash_string}.jpg')
+            img.save(img_file_out, format='JPEG', subsampling=subsampling, quality=quality)
             os.rename(img_file, img_file + '.bakIMG')
+        elif ext == '.jpg':
+            if len(hash_string) > 0:
+                logging.info(f"#{i}/{len(img_files)}: Renaming {fname} to {fname}{hash_string}.jpg")
+                img_file = img_file.replace('%20', ' ')
+                img_file_out = img_file.replace('.jpg', f'{hash_string}.jpg')
+                os.rename(img_file, img_file_out)
+
 
 
 if __name__ == "__main__":
 
     logging.basicConfig(level=logging.INFO)
     args = parse_args_to_dict()
-    process_md_files_for_optimization(input_folder = args["input_folder"])
-    batch_convert_images(input_folder = args["input_folder"])
+
+    use_hash = True
+    if use_hash:
+        unique_hash = create_hash()
+    else:
+        unique_hash = None
+
+    process_md_files_for_optimization(input_folder = args["input_folder"],
+                                      unique_hash = unique_hash)
+    batch_convert_images(input_folder = args["input_folder"],
+                         unique_hash = unique_hash)

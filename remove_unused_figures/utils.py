@@ -1,6 +1,17 @@
-import logging
 import os
 import re
+import time
+
+
+def hash_suffix_str(unique_hash):
+    if unique_hash is not None:
+        return f'_{unique_hash}'
+    else:
+        return ''
+
+
+def create_hash(n = 10):
+    return '{0:010x}'.format(int(time.time() * 256))[:n]
 
 
 def get_image_refs_of_line(line):
